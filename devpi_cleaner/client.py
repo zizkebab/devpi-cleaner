@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import re
+import semver
 
 from devpi_plumber.client import volatile_index
 
@@ -50,6 +51,22 @@ class Package(object):
     def __hash__(self):
         return hash((self.index, self.name, self.version))
 
+    def __gt__(self, other):
+        result = self.index == other.index and self.name == other.name
+        try:
+            result = result and semver.compare(self.version, other.version) > 0
+        except ValueError as e:
+            result = result and self.version > other.version
+        return result
+
+    def __lt__(self, other):
+        result = self.index == other.index and self.name == other.name
+        try:
+            result = result and semver.compare(self.version, other.version) < 0
+        except ValueError as e:
+            result = result and self.version < other.version
+        return result
+
 
 def _list_packages_on_index(client, index, package_spec, only_dev, version_filter):
     if version_filter is not None:
@@ -87,8 +104,20 @@ def list_packages_by_index(client, index_spec, package_spec, only_dev, version_f
     }
 
 
-def remove_packages(client, index, packages, force):
+def remove_packages(client, index, packages, force, versions_to_keep = 0):
+    versions_deleted = 0
+    num_of_packages = len(packages)
+    print ("num of packages: {}".format(num_of_packages))
+    sorted_packages = sorted(packages)
     with volatile_index(client, index, force):
-        for package in packages:
+        for package in sorted_packages:
             assert package.index == index
-            client.remove('--index', package.index, '{name}=={version}'.format(name=package.name, version=package.version))
+            print (package)
+            if num_of_packages - versions_deleted > versions_to_keep:
+                print ("deleting {name}=={version}".format(name=package.name, version=package.version))
+                client.remove('--index', package.index, '{name}=={version}'.format(name=package.name, version=package.version))
+                print("deleted {name}=={version}".format(name=package.name, version=package.version))
+                versions_deleted += 1
+            else:
+                print ("deleted {}, leaving {} versions".format(versions_deleted, versions_to_keep))
+                return

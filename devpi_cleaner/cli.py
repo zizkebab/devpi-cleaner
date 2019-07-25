@@ -23,6 +23,7 @@ def main(args=None):
     parser.add_argument('--batch', help='Assume yes on confirmation questions.', action='store_true')
     parser.add_argument('--dev-only', help='Remove only development versions as specified by PEP 440.', action='store_true')
     parser.add_argument('--version-filter', metavar='REGEX', help='Remove only versions in which the given regular expression can be found.')
+    parser.add_argument('--versions-to-keep', type=int, help='Number of versions to keep.')
     parser.add_argument('--force', help='Temporarily make indices volatile to enable package removal.', action='store_true')
     parser.add_argument('--password', help='The password with which to authenticate.')
     parser.add_argument('--login', help='The user name to user for authentication. Defaults to the user of the indices to operate on.')
@@ -41,7 +42,8 @@ def main(args=None):
 
             for index, packages in packages_by_index.items():
                 print('Packages to be deleted from {}: '.format(index))
-                for package in packages:
+                sorted_packages = sorted(packages)
+                for package in sorted_packages:
                     print(' * {}'.format(package))
 
             if not args.batch:
@@ -52,10 +54,10 @@ def main(args=None):
 
             for index, packages in packages_by_index.items():
                 print('Cleaning {}…'.format(index))
-                if len(packages) > 1:
-                    # Make iteration over the packages display a progress bar
-                    packages = ProgressBar()(packages)
-                remove_packages(client, index, packages, args.force)
+                # if len(packages) > 1:
+                #     # Make iteration over the packages display a progress bar
+                #     packages = ProgressBar()(packages)
+                remove_packages(client, index, packages, args.force, args.versions_to_keep)
 
     except DevpiClientError as client_error:
         print_(client_error, file=sys.stderr)

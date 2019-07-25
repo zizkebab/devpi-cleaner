@@ -26,6 +26,7 @@ setup(
         'setuptools>=0.8',
         'six',
         'progressbar2',
+        'semver'
     ],
     setup_requires=[
         'nose',
